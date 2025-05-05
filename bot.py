@@ -1,11 +1,12 @@
-from telegram import Update
-from telegram.ext import ApplicationBuilder, MessageHandler, ContextTypes, filters
-from datetime import date
+from telegram import InlineQueryResultArticle, InputTextMessageContent, Update
+from telegram.ext import ApplicationBuilder, InlineQueryHandler, ContextTypes
+from uuid import uuid4
+from datetime import date, timedelta
 import os
+import re
 
-BOT_TOKEN = os.getenv("BOT_TOKEN")  # Set this in Railway or your .env file
+BOT_TOKEN = os.getenv("BOT_TOKEN")
 
-# Function to calculate Easter (Western)
 def calculate_easter(year):
     a = year % 19
     b = year // 100
@@ -23,24 +24,20 @@ def calculate_easter(year):
     day = ((h + l - 7 * m + 114) % 31) + 1
     return date(year, month, day)
 
-# Respond to any numeric year
-async def respond_year(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = update.message.text.strip()
-    if text.isdigit():
-        year = int(text)
-        if 1583 <= year <= 9999:
-            easter = calculate_easter(year)
-            await update.message.reply_text(f"Easter in {year} is on {easter.strftime('%-d %B %Y')}")
-        else:
-            await update.message.reply_text("Please send a valid year (1583–9999).")
+async def inline_query(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.inline_query.query.strip().lower()
+    match = re.search(r"(easter|ash|pentecost)[^\d]*(\d{4})", query)
+
+    if not match:
+        result_text = "Type something like 'easter 2045', 'ash 2045', or 'pentecost 2045'."
     else:
-        await update.message.reply_text("Send a year like '2045' to get the Easter date.")
-
-# Main bot setup
-def main():
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, respond_year))
-    app.run_polling()
-
-if __name__ == "__main__":
-    main()
+        feast, year = match.group(1), int(match.group(2))
+        if not (1583 <= year <= 9999):
+            result_text = "Please provide a year between 1583 and 9999."
+        else:
+            easter = calculate_easter(year)
+            if feast == "easter":
+                result_text = f"Easter in {year} is on {easter.strftime('%-d %B %Y')}"
+            elif feast == "ash":
+                ash = easter - timedelta(days=46)
+                result_text = f"Ash Wednesday_
