@@ -1,20 +1,34 @@
-# bot.py
 import os
-import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from telegram import Update
-from telegram.ext import ApplicationBuilder, ContextTypes, MessageHandler, filters
+from telegram.ext import ApplicationBuilder, MessageHandler, ContextTypes, filters
 
-logging.basicConfig(level=logging.INFO)
+# Easter and target date calculation
+def compute_target_date(year):
+    a = year % 19
+    b = year // 100
+    c = year % 100
+    d = b // 4
+    e = b % 4
+    f = (b + 8) // 25
+    g = (b - f + 1) // 3
+    h = (19 * a + b - d - g + 15) % 30
+    i = c // 4
+    k = c % 4
+    l = (32 + 2 * e + 2 * i - h - k) % 7
+    m = (a + 11 * h + 22 * l) // 451
+    month = (h + l - 7 * m + 114) // 31
+    day = ((h + l - 7 * m + 114) % 31) + 1
+    easter = datetime(year, month, day)
+    target = easter + timedelta(days=15)
+    return f"{target.strftime('%d.%m.%Y')}\nMonday after the second Sunday after Easter"
 
-BOT_TOKEN = os.environ.get("BOT_TOKEN")
+# Telegram message handler
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    year = datetime.now().year
+    msg = compute_target_date(year)
+    await update.message.reply_text(msg)
 
-async def reply_with_date(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    today = datetime.now().strftime('%Y-%m-%d')
-    await update.message.reply_text(f"Today's date is: {today}")
-
-app = ApplicationBuilder().token(BOT_TOKEN).build()
-app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), reply_with_date))
-
-if __name__ == '__main__':
-    app.run_polling()
+# Main app
+if __name__ == "__main__":
+    token =
