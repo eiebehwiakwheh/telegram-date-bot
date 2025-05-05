@@ -1,23 +1,20 @@
+# bot.py
 import os
+import logging
 from datetime import datetime
 from telegram import Update
 from telegram.ext import ApplicationBuilder, ContextTypes, MessageHandler, filters
 
-from weeks_after_easter import time_since_easter  # Import logic from separate file
+logging.basicConfig(level=logging.INFO)
 
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    today = datetime.now().date()
-    today_str = today.strftime('%d.%m.%Y')
+BOT_TOKEN = os.environ.get("BOT_TOKEN")
 
-    # Get message from external file logic
-    relative_msg = time_since_easter(today)
+async def reply_with_date(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    today = datetime.now().strftime('%Y-%m-%d')
+    await update.message.reply_text(f"Today's date is: {today}")
 
-    # Send two separate replies
-    await update.message.reply_text(today_str)
-    await update.message.reply_text(relative_msg)
+app = ApplicationBuilder().token(BOT_TOKEN).build()
+app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), reply_with_date))
 
 if __name__ == '__main__':
-    token = os.getenv('BOT_TOKEN')  # Read token from Railway env vars
-    app = ApplicationBuilder().token(token).build()
-    app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
     app.run_polling()
